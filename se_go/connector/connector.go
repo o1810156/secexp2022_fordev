@@ -104,41 +104,41 @@ func (yobikou YobikouServer) Receive(buffer []byte) (int, error) {
 }
 
 // 予備校に合わせ中学校もローマ字で
-type TyuugakuClient struct {
+type ChugakuClient struct {
 	conn net.Conn
 }
 
-func NewTyuugakuClient(ServerAddr string) (TyuugakuClient, error) {
+func NewChugakuClient(ServerAddr string) (ChugakuClient, error) {
 	fmt.Println("予備校に接続します……")
 
 	conn, err := net.DialTimeout(PROTOCOL, ServerAddr+PORT, DEADLINE)
 	if err != nil {
-		return TyuugakuClient{}, err
+		return ChugakuClient{}, err
 	}
 
-	return TyuugakuClient{conn}, nil
+	return ChugakuClient{conn}, nil
 }
 
-func (tyuugaku TyuugakuClient) GetConn() net.Conn {
-	return tyuugaku.conn
+func (chugaku ChugakuClient) GetConn() net.Conn {
+	return chugaku.conn
 }
 
-func (tyuugaku TyuugakuClient) Close() error {
-	return tyuugaku.conn.Close()
+func (chugaku ChugakuClient) Close() error {
+	return chugaku.conn.Close()
 }
 
-func (tyuugaku TyuugakuClient) RawSend(data []byte) error {
-	return rawSend(tyuugaku, data)
+func (chugaku ChugakuClient) RawSend(data []byte) error {
+	return rawSend(chugaku, data)
 }
 
-func (tyuugaku TyuugakuClient) Send(data []byte) error {
-	return send(tyuugaku, data)
+func (chugaku ChugakuClient) Send(data []byte) error {
+	return send(chugaku, data)
 }
 
-func (tyuugaku TyuugakuClient) RawReceive(buffer []byte) (int, error) {
-	return rawReceive(tyuugaku, buffer)
+func (chugaku ChugakuClient) RawReceive(buffer []byte) (int, error) {
+	return rawReceive(chugaku, buffer)
 }
 
-func (tyuugaku TyuugakuClient) Receive(buffer []byte) (int, error) {
-	return receive(tyuugaku, buffer)
+func (chugaku ChugakuClient) Receive(buffer []byte) (int, error) {
+	return receive(chugaku, buffer)
 }

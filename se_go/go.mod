@@ -1,4 +1,4 @@
-module se
+module github.com/o1810156/secexp2022/se_go
 
 go 1.13
 

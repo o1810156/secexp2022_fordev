@@ -168,12 +168,12 @@ func receiveMatrix(communicator Communicator, size matrixSize) ([][]float64, err
 	return strMatrix2FloatMatrix(matrix.Data)
 }
 
-func (tyuugaku TyuugakuClient) SendTable(table [][]float64) error {
-	return sendTable(tyuugaku, table)
+func (chugaku ChugakuClient) SendTable(table [][]float64) error {
+	return sendTable(chugaku, table)
 }
 
-func (tyuugaku TyuugakuClient) ReceiveTable() ([][]float64, error) {
-	return receiveTable(tyuugaku)
+func (chugaku ChugakuClient) ReceiveTable() ([][]float64, error) {
+	return receiveTable(chugaku)
 }
 
 func (yobikou YobikouServer) SendTable(table [][]float64) error {

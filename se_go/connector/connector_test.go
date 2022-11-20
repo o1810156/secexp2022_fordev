@@ -9,7 +9,7 @@ import (
 
 func TestConnector(t *testing.T) {
 	yc := make(chan YobikouServer)
-	tc := make(chan TyuugakuClient)
+	tc := make(chan ChugakuClient)
 
 	go prepareServer(yc)
 	time.Sleep(time.Duration(10) * time.Millisecond)
@@ -17,12 +17,12 @@ func TestConnector(t *testing.T) {
 
 	yobikou := <-yc
 	defer yobikou.Close()
-	tyuugaku := <-tc
-	defer tyuugaku.Close()
+	chugaku := <-tc
+	defer chugaku.Close()
 
-	t.Run("ping", testPing(yobikou, tyuugaku))
-	t.Run("pong", testPong(yobikou, tyuugaku))
-	t.Run("matrix", testMatrix(yobikou, tyuugaku))
+	t.Run("ping", testPing(yobikou, chugaku))
+	t.Run("pong", testPong(yobikou, chugaku))
+	t.Run("matrix", testMatrix(yobikou, chugaku))
 }
 
 func prepareServer(ch chan YobikouServer) {
@@ -34,18 +34,18 @@ func prepareServer(ch chan YobikouServer) {
 	ch <- yobikou
 }
 
-func prepareClient(ch chan TyuugakuClient) {
-	tyuugaku, err := NewTyuugakuClient("0.0.0.0")
+func prepareClient(ch chan ChugakuClient) {
+	chugaku, err := NewChugakuClient("0.0.0.0")
 	if err != nil {
 		panic(err)
 	}
 
-	ch <- tyuugaku
+	ch <- chugaku
 }
 
-func testPing(yobikou YobikouServer, tyuugaku TyuugakuClient) func(t *testing.T) {
+func testPing(yobikou YobikouServer, chugaku ChugakuClient) func(t *testing.T) {
 	return func(t *testing.T) {
-		go tyuugaku.Send([]byte("ping"))
+		go chugaku.Send([]byte("ping"))
 
 		buffer := make([]byte, 1024)
 		len, err := yobikou.Receive(buffer)
@@ -56,12 +56,12 @@ func testPing(yobikou YobikouServer, tyuugaku TyuugakuClient) func(t *testing.T)
 	}
 }
 
-func testPong(yobikou YobikouServer, tyuugaku TyuugakuClient) func(t *testing.T) {
+func testPong(yobikou YobikouServer, chugaku ChugakuClient) func(t *testing.T) {
 	return func(t *testing.T) {
 		go yobikou.Send([]byte("pong"))
 
 		buffer := make([]byte, 1024)
-		len, err := tyuugaku.Receive(buffer)
+		len, err := chugaku.Receive(buffer)
 		if err != nil {
 			t.Fatal(err)
 		}
