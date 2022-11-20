@@ -116,15 +116,15 @@ func sendMatrix(communicator Communicator, mtrx matrix) error {
 const DOUBLE_BUFFER = 20
 
 func receiveTable(communicator Communicator) ([][]float64, error) {
-	size, err := recieveSize(communicator)
+	size, err := receiveSize(communicator)
 	if err != nil {
 		return nil, err
 	}
 
-	return recieveMatrix(communicator, size)
+	return receiveMatrix(communicator, size)
 }
 
-func recieveSize(communicator Communicator) (matrixSize, error) {
+func receiveSize(communicator Communicator) (matrixSize, error) {
 	buffer := make([]byte, 1024)
 	len, err := receive(communicator, buffer)
 	if err != nil {
@@ -146,7 +146,7 @@ func recieveSize(communicator Communicator) (matrixSize, error) {
 	return size, nil
 }
 
-func recieveMatrix(communicator Communicator, size matrixSize) ([][]float64, error) {
+func receiveMatrix(communicator Communicator, size matrixSize) ([][]float64, error) {
 	buffer := make([]byte, size.Rows*size.Cols*DOUBLE_BUFFER+DOUBLE_BUFFER)
 	len, err := receive(communicator, buffer)
 	if err != nil {
@@ -168,18 +168,18 @@ func recieveMatrix(communicator Communicator, size matrixSize) ([][]float64, err
 	return strMatrix2FloatMatrix(matrix.Data)
 }
 
-func (tyuugaku Tyuugaku) SendTable(table [][]float64) error {
+func (tyuugaku TyuugakuClient) SendTable(table [][]float64) error {
 	return sendTable(tyuugaku, table)
 }
 
-func (tyuugaku Tyuugaku) ReceiveTable() ([][]float64, error) {
+func (tyuugaku TyuugakuClient) ReceiveTable() ([][]float64, error) {
 	return receiveTable(tyuugaku)
 }
 
-func (yobikou Yobikou) SendTable(table [][]float64) error {
+func (yobikou YobikouServer) SendTable(table [][]float64) error {
 	return sendTable(yobikou, table)
 }
 
-func (yobikou Yobikou) ReceiveTable() ([][]float64, error) {
+func (yobikou YobikouServer) ReceiveTable() ([][]float64, error) {
 	return receiveTable(yobikou)
 }
