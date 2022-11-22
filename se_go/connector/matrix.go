@@ -6,35 +6,30 @@ import (
 	"strconv"
 )
 
-type matrixSize struct {
-	Rows int
-	Cols int
-}
-
 type matrix struct {
 	Data [][]string
 }
 
-func newMatrix(table [][]float64) (matrixSize, matrix, error) {
+func newMatrix(table [][]float64) (matrix, error) {
 	rows := len(table)
 	if rows < 1 {
-		return matrixSize{}, matrix{}, fmt.Errorf("table must have at least one row")
+		return matrix{}, fmt.Errorf("table must have at least one row")
 	}
 	cols := len(table[0])
 
 	str_table := make([][]string, rows)
-	for i := 0; i < rows; i++ {
+	for i, row := range table {
 		str_table[i] = make([]string, cols)
-		for j := 0; j < cols; j++ {
+		for j, n := range row {
 			if len(table[i]) != cols {
-				return matrixSize{}, matrix{}, fmt.Errorf("table must be a rectangle")
+				return matrix{}, fmt.Errorf("table must be a rectangle")
 			}
 
-			str_table[i][j] = strconv.FormatFloat(table[i][j], 'E', -1, 64)
+			str_table[i][j] = strconv.FormatFloat(n, 'E', -1, 64)
 		}
 	}
 
-	return matrixSize{rows, cols}, matrix{str_table}, nil
+	return matrix{str_table}, nil
 }
 
 func strMatrix2FloatMatrix(table [][]string) ([][]float64, error) {
@@ -45,14 +40,14 @@ func strMatrix2FloatMatrix(table [][]string) ([][]float64, error) {
 	cols := len(table[0])
 
 	float_table := make([][]float64, rows)
-	for i := 0; i < rows; i++ {
+	for i, row := range table {
 		float_table[i] = make([]float64, cols)
-		for j := 0; j < cols; j++ {
+		for j, s := range row {
 			if len(table[i]) != cols {
 				return nil, fmt.Errorf("table must be a rectangle")
 			}
 
-			n, err := strconv.ParseFloat(table[i][j], 64)
+			n, err := strconv.ParseFloat(s, 64)
 			if err != nil {
 				return nil, err
 			}
@@ -64,104 +59,27 @@ func strMatrix2FloatMatrix(table [][]string) ([][]float64, error) {
 }
 
 func sendTable(communicator Communicator, table [][]float64) error {
-	size, matrix, err := newMatrix(table)
+	mtrx, err := newMatrix(table)
 	if err != nil {
 		return err
 	}
 
-	err = sendSize(communicator, size)
-	if err != nil {
-		return err
-	}
-
-	return sendMatrix(communicator, matrix)
-}
-
-func sendSize(communicator Communicator, size matrixSize) error {
-	data, err := json.Marshal(size)
-	if err != nil {
-		return err
-	}
-
-	err = send(communicator, data)
-	if err != nil {
-		return err
-	}
-
-	// wait reply size
-	buffer := make([]byte, 1024)
-	_, err = receive(communicator, buffer)
-
-	return err
-}
-
-func sendMatrix(communicator Communicator, mtrx matrix) error {
 	data, err := json.Marshal(mtrx)
 	if err != nil {
 		return err
 	}
 
-	err = send(communicator, data)
-	if err != nil {
-		return err
-	}
-
-	// wait reply matrix
-	buffer := make([]byte, 1024)
-	_, err = receive(communicator, buffer)
-
-	return err
+	return send(communicator, data)
 }
-
-const DOUBLE_BUFFER = 20
 
 func receiveTable(communicator Communicator) ([][]float64, error) {
-	size, err := receiveSize(communicator)
-	if err != nil {
-		return nil, err
-	}
-
-	return receiveMatrix(communicator, size)
-}
-
-func receiveSize(communicator Communicator) (matrixSize, error) {
-	buffer := make([]byte, 1024)
-	len, err := receive(communicator, buffer)
-	if err != nil {
-		return matrixSize{}, err
-	}
-
-	// reply size
-	err = send(communicator, []byte("size"))
-	if err != nil {
-		return matrixSize{}, err
-	}
-
-	var size matrixSize
-	err = json.Unmarshal(buffer[:len], &size)
-	if err != nil {
-		return matrixSize{}, err
-	}
-
-	return size, nil
-}
-
-func receiveMatrix(communicator Communicator, size matrixSize) ([][]float64, error) {
-	buffer := make([]byte, size.Rows*size.Cols*DOUBLE_BUFFER+DOUBLE_BUFFER)
-	len, err := receive(communicator, buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	// reply matrix
-	err = send(communicator, []byte("matrix"))
+	data, err := receive(communicator)
 	if err != nil {
 		return nil, err
 	}
 
 	var matrix matrix
-	err = json.Unmarshal(buffer[:len], &matrix)
-	if err != nil {
+	if err := json.Unmarshal(data, &matrix); err != nil {
 		return nil, err
 	}
 

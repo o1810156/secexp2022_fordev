@@ -1,6 +1,8 @@
 package connector
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"net"
 	"time"
@@ -12,50 +14,41 @@ const DEADLINE = time.Duration(10) * time.Second
 
 type Communicator interface {
 	GetConn() net.Conn
+	GetScanner() *bufio.Scanner
 }
 
-func rawSend(com Communicator, data []byte) error {
+func send(com Communicator, original_data []byte) error {
 	conn := com.GetConn()
-	conn.Write(data)
+
+	data := bytes.ReplaceAll(original_data, []byte("\r\n"), []byte("\\r\\n"))
+	data = bytes.ReplaceAll(data, []byte("\n"), []byte("\\n"))
+	if _, err := conn.Write(data); err != nil {
+		return err
+	}
+	if _, err := conn.Write([]byte("\n")); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func send(com Communicator, data []byte) error {
-	err := rawSend(com, data)
-	if err != nil {
-		return err
+func receive(com Communicator) ([]byte, error) {
+	scanner := com.GetScanner()
+	if !scanner.Scan() {
+		return nil, scanner.Err()
 	}
+	data := scanner.Bytes()
 
-	_, err = rawReceive(com, []byte{})
+	data = bytes.ReplaceAll(data, []byte("\\r\\n"), []byte("\r\n"))
+	data = bytes.ReplaceAll(data, []byte("\\n"), []byte("\n"))
 
-	return err
-}
-
-func rawReceive(com Communicator, buffer []byte) (int, error) {
-	conn := com.GetConn()
-	len, err := conn.Read(buffer)
-
-	return len, err
-}
-
-func receive(com Communicator, buffer []byte) (int, error) {
-	len, err := rawReceive(com, buffer)
-	if err != nil {
-		return 0, err
-	}
-
-	err = rawSend(com, []byte{})
-	if err != nil {
-		return 0, err
-	}
-
-	return len, nil
+	return data, nil
 }
 
 // 予備校に該当するよい英単語がないためローマ字表記
 type YobikouServer struct {
-	conn net.Conn
+	conn    net.Conn
+	scanner *bufio.Scanner
 }
 
 func NewYobikouServer() (YobikouServer, error) {
@@ -76,36 +69,35 @@ func NewYobikouServer() (YobikouServer, error) {
 		return YobikouServer{}, err
 	}
 
-	return YobikouServer{conn}, nil
+	scanner := bufio.NewScanner(conn)
+
+	return YobikouServer{conn, scanner}, nil
 }
 
 func (yobikou YobikouServer) GetConn() net.Conn {
 	return yobikou.conn
 }
 
-func (yobikou YobikouServer) Close() error {
-	return yobikou.conn.Close()
+func (yobikou YobikouServer) GetScanner() *bufio.Scanner {
+	return yobikou.scanner
 }
 
-func (yobikou YobikouServer) RawSend(data []byte) error {
-	return rawSend(yobikou, data)
+func (yobikou YobikouServer) Close() error {
+	return yobikou.conn.Close()
 }
 
 func (yobikou YobikouServer) Send(data []byte) error {
 	return send(yobikou, data)
 }
 
-func (yobikou YobikouServer) RawReceive(buffer []byte) (int, error) {
-	return rawReceive(yobikou, buffer)
-}
-
-func (yobikou YobikouServer) Receive(buffer []byte) (int, error) {
-	return receive(yobikou, buffer)
+func (yobikou YobikouServer) Receive() ([]byte, error) {
+	return receive(yobikou)
 }
 
 // 予備校に合わせ中学校もローマ字で
 type ChugakuClient struct {
-	conn net.Conn
+	conn    net.Conn
+	scanner *bufio.Scanner
 }
 
 func NewChugakuClient(ServerAddr string) (ChugakuClient, error) {
@@ -116,29 +108,27 @@ func NewChugakuClient(ServerAddr string) (ChugakuClient, error) {
 		return ChugakuClient{}, err
 	}
 
-	return ChugakuClient{conn}, nil
+	scanner := bufio.NewScanner(conn)
+
+	return ChugakuClient{conn, scanner}, nil
 }
 
 func (chugaku ChugakuClient) GetConn() net.Conn {
 	return chugaku.conn
 }
 
-func (chugaku ChugakuClient) Close() error {
-	return chugaku.conn.Close()
+func (chugaku ChugakuClient) GetScanner() *bufio.Scanner {
+	return chugaku.scanner
 }
 
-func (chugaku ChugakuClient) RawSend(data []byte) error {
-	return rawSend(chugaku, data)
+func (chugaku ChugakuClient) Close() error {
+	return chugaku.conn.Close()
 }
 
 func (chugaku ChugakuClient) Send(data []byte) error {
 	return send(chugaku, data)
 }
 
-func (chugaku ChugakuClient) RawReceive(buffer []byte) (int, error) {
-	return rawReceive(chugaku, buffer)
-}
-
-func (chugaku ChugakuClient) Receive(buffer []byte) (int, error) {
-	return receive(chugaku, buffer)
+func (chugaku ChugakuClient) Receive() ([]byte, error) {
+	return receive(chugaku)
 }

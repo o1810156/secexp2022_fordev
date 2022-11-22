@@ -1,18 +1,21 @@
 package connector
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
+var SPAN = time.Duration(10) * time.Millisecond
+
 func TestConnector(t *testing.T) {
 	yc := make(chan YobikouServer)
 	tc := make(chan ChugakuClient)
 
 	go prepareServer(yc)
-	time.Sleep(time.Duration(10) * time.Millisecond)
+	time.Sleep(SPAN)
 	go prepareClient(tc)
 
 	yobikou := <-yc
@@ -20,9 +23,13 @@ func TestConnector(t *testing.T) {
 	chugaku := <-tc
 	defer chugaku.Close()
 
-	t.Run("ping", testPing(yobikou, chugaku))
-	t.Run("pong", testPong(yobikou, chugaku))
-	t.Run("matrix", testMatrix(yobikou, chugaku))
+	for i := 0; i < 10; i++ {
+		t.Run("ping", testPing(yobikou, chugaku))
+		t.Run("pong", testPing(chugaku, yobikou))
+		t.Run("pingWithNewLine", testPingWithNewLine(yobikou, chugaku))
+		t.Run("pongWithNewLine", testPingWithNewLine(chugaku, yobikou))
+		t.Run("matrix", testMatrix(yobikou, chugaku))
+	}
 }
 
 func prepareServer(ch chan YobikouServer) {
@@ -43,28 +50,60 @@ func prepareClient(ch chan ChugakuClient) {
 	ch <- chugaku
 }
 
-func testPing(yobikou YobikouServer, chugaku ChugakuClient) func(t *testing.T) {
-	return func(t *testing.T) {
-		go chugaku.Send([]byte("ping"))
+type Messenger interface {
+	Send([]byte) error
+	Receive() ([]byte, error)
+	SendTable([][]float64) error
+	ReceiveTable() ([][]float64, error)
+}
 
-		buffer := make([]byte, 1024)
-		len, err := yobikou.Receive(buffer)
-		if err != nil {
-			t.Fatal(err)
+type receiveRes struct {
+	res []byte
+	err error
+}
+
+func testPing(m1 Messenger, m2 Messenger) func(t *testing.T) {
+	return func(t *testing.T) {
+		fmt.Println("testPing")
+		go m1.Send([]byte("ping"))
+
+		c := make(chan receiveRes)
+		go func() {
+			result, err := m2.Receive()
+			c <- receiveRes{result, err}
+		}()
+
+		// time.Sleep(SPAN)
+
+		r := <-c
+		if r.err != nil {
+			t.Fatal(r.err)
 		}
-		assert.Equal(t, "ping", string(buffer[:len]))
+		assert.Equal(t, "ping", string(r.res))
+		fmt.Println("testPing done")
 	}
 }
 
-func testPong(yobikou YobikouServer, chugaku ChugakuClient) func(t *testing.T) {
+func testPingWithNewLine(m1 Messenger, m2 Messenger) func(t *testing.T) {
 	return func(t *testing.T) {
-		go yobikou.Send([]byte("pong"))
+		fmt.Println("testWithNewLine")
+		go m1.Send([]byte(`Hello,
+		Ping!`))
 
-		buffer := make([]byte, 1024)
-		len, err := chugaku.Receive(buffer)
-		if err != nil {
-			t.Fatal(err)
+		c := make(chan receiveRes)
+		go func() {
+			result, err := m2.Receive()
+			c <- receiveRes{result, err}
+		}()
+
+		// time.Sleep(SPAN)
+
+		r := <-c
+		if r.err != nil {
+			t.Fatal(r.err)
 		}
-		assert.Equal(t, "pong", string(buffer[:len]))
+		assert.Equal(t, `Hello,
+		Ping!`, string(r.res))
+		fmt.Println("testWithNewLine done")
 	}
 }
