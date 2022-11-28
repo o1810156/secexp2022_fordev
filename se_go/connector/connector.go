@@ -71,7 +71,7 @@ func NewYobikouServer() (YobikouServer, error) {
 
 	scanner := bufio.NewScanner(conn)
 
-	fmt.Println("接続しました．")
+	fmt.Printf("接続しました．: %v\n", conn.RemoteAddr())
 
 	return YobikouServer{conn, scanner}, nil
 }
@@ -112,7 +112,7 @@ func NewChugakuClient(ServerAddr string) (ChugakuClient, error) {
 
 	scanner := bufio.NewScanner(conn)
 
-	fmt.Println("接続しました．")
+	fmt.Printf("接続しました．: %v\n", conn.RemoteAddr())
 
 	return ChugakuClient{conn, scanner}, nil
 }
