@@ -7,7 +7,7 @@ import (
 )
 
 type matrix struct {
-	Data [][]string
+	Data [][]string `json:"data"`
 }
 
 func newMatrix(table [][]float64) (matrix, error) {
